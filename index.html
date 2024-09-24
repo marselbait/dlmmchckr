@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Memecoin Dashboard</title>
+    <title>Solana Memecoin Dashboard</title>
     <style>
         body {
             font-family: 'Arial', sans-serif;
@@ -26,6 +26,12 @@
             margin-top: 0;
             color: #333;
             word-break: break-all;
+        }
+        .tokenName {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #4a4a4a;
         }
         .price {
             font-size: 24px;
@@ -65,14 +71,15 @@
 <body>
     <div class="card" id="dashboard">
         <h2 id="contractAddress">Contract Address</h2>
-        <div class="price" id="price">$0.00</div>
+        <div id="tokenName" class="tokenName"></div>
+        <div class="price" id="price">0 SOL</div>
         <div class="range">
-            <span id="minPrice">Min: $0.00</span>
-            <span id="maxPrice">Max: $0.00</span>
+            <span id="minPrice">Min: 0 SOL</span>
+            <span id="maxPrice">Max: 0 SOL</span>
         </div>
         <input type="text" id="caInput" placeholder="Enter contract address">
-        <input type="number" id="minInput" placeholder="Enter min price">
-        <input type="number" id="maxInput" placeholder="Enter max price">
+        <input type="number" id="minInput" placeholder="Enter min price (in SOL)">
+        <input type="number" id="maxInput" placeholder="Enter max price (in SOL)">
         <button onclick="updateSettings()">Update</button>
         <div id="errorMessage"></div>
     </div>
@@ -82,6 +89,7 @@
         let contractAddress = "";
         let minPrice = 0;
         let maxPrice = 1000000;
+        let updateInterval;
 
         function updateSettings() {
             const newCA = document.getElementById('caInput').value.trim();
@@ -99,10 +107,13 @@
             if (!isNaN(newMin)) minPrice = newMin;
             if (!isNaN(newMax)) maxPrice = newMax;
 
-            document.getElementById('minPrice').textContent = `Min: $${minPrice.toFixed(2)}`;
-            document.getElementById('maxPrice').textContent = `Max: $${maxPrice.toFixed(2)}`;
+            document.getElementById('minPrice').textContent = `Min: ${minPrice.toFixed(6)} SOL`;
+            document.getElementById('maxPrice').textContent = `Max: ${maxPrice.toFixed(6)} SOL`;
 
+            // Clear existing interval and start a new one
+            clearInterval(updateInterval);
             fetchPrice();
+            updateInterval = setInterval(fetchPrice, 5000);
         }
 
         async function fetchPrice() {
@@ -113,13 +124,14 @@
 
             try {
                 const response = await axios.get(`https://api.dexscreener.com/latest/dex/tokens/${contractAddress}`);
-                console.log('API Response:', response.data);  // Log the full response
+                console.log('API Response:', response.data);
 
                 if (response.data && response.data.pairs && response.data.pairs.length > 0) {
                     const pair = response.data.pairs[0];
-                    if (pair && pair.priceUsd) {
-                        const price = parseFloat(pair.priceUsd);
-                        updateDashboard(price);
+                    if (pair && pair.priceNative && pair.baseToken) {
+                        const price = parseFloat(pair.priceNative);
+                        const tokenName = pair.baseToken.name || 'Unknown Token';
+                        updateDashboard(price, tokenName);
                         clearError();
                     } else {
                         showError('No price data found in the API response');
@@ -133,11 +145,13 @@
             }
         }
 
-        function updateDashboard(price) {
+        function updateDashboard(price, tokenName) {
             const dashboard = document.getElementById('dashboard');
             const priceElement = document.getElementById('price');
+            const tokenNameElement = document.getElementById('tokenName');
 
-            priceElement.textContent = `$${price.toFixed(6)}`;
+            priceElement.textContent = `${price.toFixed(6)} SOL`;
+            tokenNameElement.textContent = tokenName;
 
             if (price >= minPrice && price <= maxPrice) {
                 dashboard.style.backgroundColor = '#e6f2ff';  // Light blue
@@ -154,15 +168,9 @@
             document.getElementById('errorMessage').textContent = '';
         }
 
-        // Fetch price every 30 seconds only if we have a contract address
-        setInterval(() => {
-            if (contractAddress) {
-                fetchPrice();
-            }
-        }, 30000);
-
         // Initial state
         document.getElementById('price').textContent = 'Enter a contract address and click Update';
+        document.getElementById('tokenName').textContent = 'Token Name Will Appear Here';
     </script>
 </body>
 </html>
