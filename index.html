@@ -20,28 +20,31 @@
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
             padding: 20px;
             width: 300px;
-            transition: background-color 0.3s ease;
         }
-        h2 {
-            margin-top: 0;
-            color: #333;
+        .contractAddress {
+            font-size: 12px;
+            color: #666;
             word-break: break-all;
+            margin-bottom: 10px;
         }
         .tokenName {
-            font-size: 18px;
-            font-weight: bold;
-            margin-bottom: 10px;
-            color: #4a4a4a;
-        }
-        .price {
             font-size: 24px;
             font-weight: bold;
+            margin-bottom: 10px;
+            color: #333;
+        }
+        .price {
+            font-size: 28px;
+            font-weight: bold;
             margin: 10px 0;
+            transition: color 0.3s ease;
         }
         .range {
             display: flex;
             justify-content: space-between;
             margin-bottom: 10px;
+            font-size: 14px;
+            color: #666;
         }
         input {
             width: 100%;
@@ -65,13 +68,22 @@
         #errorMessage {
             color: red;
             margin-top: 10px;
+            font-size: 14px;
+        }
+        @keyframes blink {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        .blink {
+            animation: blink 0.5s;
         }
     </style>
 </head>
 <body>
     <div class="card" id="dashboard">
-        <h2 id="contractAddress">Contract Address</h2>
-        <div id="tokenName" class="tokenName"></div>
+        <div id="tokenName" class="tokenName">Token Name Will Appear Here</div>
+        <div id="contractAddress" class="contractAddress">Contract Address</div>
         <div class="price" id="price">0 SOL</div>
         <div class="range">
             <span id="minPrice">Min: 0 SOL</span>
@@ -110,10 +122,9 @@
             document.getElementById('minPrice').textContent = `Min: ${minPrice.toFixed(6)} SOL`;
             document.getElementById('maxPrice').textContent = `Max: ${maxPrice.toFixed(6)} SOL`;
 
-            // Clear existing interval and start a new one
             clearInterval(updateInterval);
             fetchPrice();
-            updateInterval = setInterval(fetchPrice, 5000);
+            updateInterval = setInterval(fetchPrice, 2000);
         }
 
         async function fetchPrice() {
@@ -146,7 +157,6 @@
         }
 
         function updateDashboard(price, tokenName) {
-            const dashboard = document.getElementById('dashboard');
             const priceElement = document.getElementById('price');
             const tokenNameElement = document.getElementById('tokenName');
 
@@ -154,10 +164,15 @@
             tokenNameElement.textContent = tokenName;
 
             if (price >= minPrice && price <= maxPrice) {
-                dashboard.style.backgroundColor = '#e6f2ff';  // Light blue
+                priceElement.style.color = 'green';
             } else {
-                dashboard.style.backgroundColor = '#ffe6e6';  // Light red
+                priceElement.style.color = 'red';
             }
+
+            // Add blink effect
+            priceElement.classList.remove('blink');
+            void priceElement.offsetWidth; // Trigger reflow
+            priceElement.classList.add('blink');
         }
 
         function showError(message) {
@@ -170,7 +185,6 @@
 
         // Initial state
         document.getElementById('price').textContent = 'Enter a contract address and click Update';
-        document.getElementById('tokenName').textContent = 'Token Name Will Appear Here';
     </script>
 </body>
 </html>
