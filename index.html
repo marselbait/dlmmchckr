@@ -5,33 +5,183 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Solana Memecoin Dashboard</title>
     <style>
-        /* ... (previous styles remain the same) ... */
-        .profile-pic {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            margin-right: 10px;
-            background-color: #e0e0e0; /* Light grey background for placeholder */
+        body {
+            font-family: 'Arial', sans-serif;
             display: flex;
             justify-content: center;
             align-items: center;
-            font-weight: bold;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+        }
+        .card {
+            background-color: #ffffff;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            width: 300px;
+        }
+        .contractAddress {
+            font-size: 12px;
             color: #666;
+            word-break: break-all;
+            margin-bottom: 10px;
+        }
+        .tokenName {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #333;
+        }
+        .price {
+            font-size: 28px;
+            font-weight: bold;
+            margin: 10px 0;
+            transition: color 0.3s ease;
+        }
+        .range {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            font-size: 14px;
+            color: #666;
+        }
+        .input-group {
+            margin-bottom: 10px;
+        }
+        .input-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 14px;
+            color: #333;
+        }
+        input {
+            width: 100%;
+            padding: 5px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        button {
+            width: 100%;
+            padding: 10px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        #errorMessage {
+            color: red;
+            margin-top: 10px;
+            font-size: 14px;
+        }
+        #timeElapsed {
+            font-size: 14px;
+            color: #666;
+            margin-top: 10px;
+            margin-bottom: 20px;  /* Added more space here */
+        }
+        .price-visual {
+            height: 20px;
+            background-color: #e0e0e0;
+            margin-top: 15px;
+            position: relative;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .price-indicator {
+            width: 10px;
+            height: 20px;
+            background-color: #4CAF50;
+            position: absolute;
+            transition: left 0.3s ease;
+        }
+        @keyframes blink {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        .blink {
+            animation: blink 0.5s;
         }
     </style>
 </head>
 <body>
     <div class="card" id="dashboard">
-        <div class="header">
-            <div id="profilePic" class="profile-pic">?</div>
-            <div id="tokenName" class="tokenName">Token Name Will Appear Here</div>
+        <div id="tokenName" class="tokenName">Token Name Will Appear Here</div>
+        <div id="contractAddress" class="contractAddress">Contract Address</div>
+        <div class="price" id="price">0 SOL</div>
+        <div class="range">
+            <span id="minPrice">Min: 0 SOL</span>
+            <span id="maxPrice">Max: 0 SOL</span>
         </div>
-        <!-- ... (rest of the HTML remains the same) ... -->
+        <div id="timeElapsed">Time Elapsed: 0s</div>
+        <div class="input-group">
+            <label for="caInput">Contract Address:</label>
+            <input type="text" id="caInput" placeholder="Enter contract address">
+        </div>
+        <div class="input-group">
+            <label for="minInput">Minimum Price (SOL):</label>
+            <input type="number" id="minInput" placeholder="Enter min price">
+        </div>
+        <div class="input-group">
+            <label for="maxInput">Maximum Price (SOL):</label>
+            <input type="number" id="maxInput" placeholder="Enter max price">
+        </div>
+        <button onclick="updateSettings()">Update</button>
+        <div id="errorMessage"></div>
+        <div class="price-visual">
+            <div class="price-indicator" id="priceIndicator"></div>
+        </div>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.21.1/axios.min.js"></script>
     <script>
-        // ... (previous JavaScript code remains the same) ...
+        let contractAddress = "";
+        let minPrice = 0;
+        let maxPrice = 1000000;
+        let updateInterval;
+        let startTime;
+        let elapsedInterval;
+
+        function updateSettings() {
+            const newCA = document.getElementById('caInput').value.trim();
+            const newMin = parseFloat(document.getElementById('minInput').value);
+            const newMax = parseFloat(document.getElementById('maxInput').value);
+
+            if (newCA) {
+                contractAddress = newCA;
+                document.getElementById('contractAddress').textContent = contractAddress;
+            } else {
+                showError("Please enter a valid contract address.");
+                return;
+            }
+
+            if (!isNaN(newMin)) minPrice = newMin;
+            if (!isNaN(newMax)) maxPrice = newMax;
+
+            document.getElementById('minPrice').textContent = `Min: ${minPrice} SOL`;
+            document.getElementById('maxPrice').textContent = `Max: ${maxPrice} SOL`;
+
+            clearInterval(updateInterval);
+            clearInterval(elapsedInterval);
+            startTime = Date.now();
+            updateElapsedTime();
+            elapsedInterval = setInterval(updateElapsedTime, 1000);
+
+            fetchPrice();
+            updateInterval = setInterval(fetchPrice, 5000); // Update every 5 seconds
+        }
+
+        function updateElapsedTime() {
+            const elapsed = Math.floor((Date.now() - startTime) / 1000);
+            document.getElementById('timeElapsed').textContent = `Time Elapsed: ${elapsed}s`;
+        }
 
         async function fetchPrice() {
             if (!contractAddress) {
@@ -44,14 +194,14 @@
                 console.log('API Response:', response.data);
 
                 if (response.data && response.data.pairs && response.data.pairs.length > 0) {
+                    // Sort pairs by liquidity in descending order
                     const sortedPairs = response.data.pairs.sort((a, b) => b.liquidity.usd - a.liquidity.usd);
-                    const pair = sortedPairs[0];
+                    const pair = sortedPairs[0]; // Use the pair with the highest liquidity
 
                     if (pair && pair.priceNative && pair.baseToken) {
                         const price = parseFloat(pair.priceNative);
                         const tokenName = pair.baseToken.name || 'Unknown Token';
-                        const tokenSymbol = pair.baseToken.symbol || '?';
-                        updateDashboard(price, tokenName, tokenSymbol);
+                        updateDashboard(price, tokenName);
                         clearError();
                     } else {
                         showError('No valid price data found in the API response');
@@ -65,15 +215,13 @@
             }
         }
 
-        function updateDashboard(price, tokenName, tokenSymbol) {
+        function updateDashboard(price, tokenName) {
             const priceElement = document.getElementById('price');
             const tokenNameElement = document.getElementById('tokenName');
-            const profilePicElement = document.getElementById('profilePic');
             const priceIndicator = document.getElementById('priceIndicator');
 
-            priceElement.textContent = `${price.toFixed(6)} SOL`;
+            priceElement.textContent = `${price.toFixed(6)} SOL`; // Display price with 6 decimal places
             tokenNameElement.textContent = tokenName;
-            profilePicElement.textContent = tokenSymbol.charAt(0).toUpperCase();
 
             if (price >= minPrice && price <= maxPrice) {
                 priceElement.style.color = 'green';
@@ -92,7 +240,16 @@
             priceElement.classList.add('blink');
         }
 
-        // ... (rest of the JavaScript remains the same) ...
+        function showError(message) {
+            document.getElementById('errorMessage').textContent = message;
+        }
+
+        function clearError() {
+            document.getElementById('errorMessage').textContent = '';
+        }
+
+        // Initial state
+        document.getElementById('price').textContent = 'Enter a contract address and click Update';
     </script>
 </body>
 </html>
