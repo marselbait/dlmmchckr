@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Memecoin Dashboard</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+        }
+        .card {
+            background-color: #ffffff;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            width: 300px;
+            transition: background-color 0.3s ease;
+        }
+        h2 {
+            margin-top: 0;
+            color: #333;
+            word-break: break-all;
+        }
+        .price {
+            font-size: 24px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        .range {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+        input {
+            width: 100%;
+            padding: 5px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        button {
+            width: 100%;
+            padding: 10px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        #errorMessage {
+            color: red;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="card" id="dashboard">
+        <h2 id="contractAddress">Contract Address</h2>
+        <div class="price" id="price">$0.00</div>
+        <div class="range">
+            <span id="minPrice">Min: $0.00</span>
+            <span id="maxPrice">Max: $0.00</span>
+        </div>
+        <input type="text" id="caInput" placeholder="Enter contract address">
+        <input type="number" id="minInput" placeholder="Enter min price">
+        <input type="number" id="maxInput" placeholder="Enter max price">
+        <button onclick="updateSettings()">Update</button>
+        <div id="errorMessage"></div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.21.1/axios.min.js"></script>
+    <script>
+        let contractAddress = "";
+        let minPrice = 0;
+        let maxPrice = 1000000;
+
+        function updateSettings() {
+            const newCA = document.getElementById('caInput').value.trim();
+            const newMin = parseFloat(document.getElementById('minInput').value);
+            const newMax = parseFloat(document.getElementById('maxInput').value);
+
+            if (newCA) {
+                contractAddress = newCA;
+                document.getElementById('contractAddress').textContent = contractAddress;
+            } else {
+                showError("Please enter a valid contract address.");
+                return;
+            }
+
+            if (!isNaN(newMin)) minPrice = newMin;
+            if (!isNaN(newMax)) maxPrice = newMax;
+
+            document.getElementById('minPrice').textContent = `Min: $${minPrice.toFixed(2)}`;
+            document.getElementById('maxPrice').textContent = `Max: $${maxPrice.toFixed(2)}`;
+
+            fetchPrice();
+        }
+
+        async function fetchPrice() {
+            if (!contractAddress) {
+                showError('Please enter a contract address');
+                return;
+            }
+
+            try {
+                const response = await axios.get(`https://api.dexscreener.com/latest/dex/tokens/${contractAddress}`);
+                console.log('API Response:', response.data);  // Log the full response
+
+                if (response.data && response.data.pairs && response.data.pairs.length > 0) {
+                    const pair = response.data.pairs[0];
+                    if (pair && pair.priceUsd) {
+                        const price = parseFloat(pair.priceUsd);
+                        updateDashboard(price);
+                        clearError();
+                    } else {
+                        showError('No price data found in the API response');
+                    }
+                } else {
+                    showError('No data found for this contract address');
+                }
+            } catch (error) {
+                console.error('Error fetching price:', error);
+                showError(`Error fetching price: ${error.message}`);
+            }
+        }
+
+        function updateDashboard(price) {
+            const dashboard = document.getElementById('dashboard');
+            const priceElement = document.getElementById('price');
+
+            priceElement.textContent = `$${price.toFixed(6)}`;
+
+            if (price >= minPrice && price <= maxPrice) {
+                dashboard.style.backgroundColor = '#e6f2ff';  // Light blue
+            } else {
+                dashboard.style.backgroundColor = '#ffe6e6';  // Light red
+            }
+        }
+
+        function showError(message) {
+            document.getElementById('errorMessage').textContent = message;
+        }
+
+        function clearError() {
+            document.getElementById('errorMessage').textContent = '';
+        }
+
+        // Fetch price every 30 seconds only if we have a contract address
+        setInterval(() => {
+            if (contractAddress) {
+                fetchPrice();
+            }
+        }, 30000);
+
+        // Initial state
+        document.getElementById('price').textContent = 'Enter a contract address and click Update';
+    </script>
+</body>
+</html>
