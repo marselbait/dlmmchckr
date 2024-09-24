@@ -21,6 +21,18 @@
             padding: 20px;
             width: 300px;
         }
+        .header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .profile-pic {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            margin-right: 10px;
+            object-fit: cover;
+        }
         .contractAddress {
             font-size: 12px;
             color: #666;
@@ -30,7 +42,6 @@
         .tokenName {
             font-size: 24px;
             font-weight: bold;
-            margin-bottom: 10px;
             color: #333;
         }
         .price {
@@ -84,6 +95,7 @@
             font-size: 14px;
             color: #666;
             margin-top: 10px;
+            margin-bottom: 20px;  /* Added more space here */
         }
         .price-visual {
             height: 20px;
@@ -112,7 +124,10 @@
 </head>
 <body>
     <div class="card" id="dashboard">
-        <div id="tokenName" class="tokenName">Token Name Will Appear Here</div>
+        <div class="header">
+            <img id="profilePic" src="/api/placeholder/40/40" alt="Token" class="profile-pic">
+            <div id="tokenName" class="tokenName">Token Name Will Appear Here</div>
+        </div>
         <div id="contractAddress" class="contractAddress">Contract Address</div>
         <div class="price" id="price">0 SOL</div>
         <div class="range">
@@ -200,7 +215,8 @@
                     if (pair && pair.priceNative && pair.baseToken) {
                         const price = parseFloat(pair.priceNative);
                         const tokenName = pair.baseToken.name || 'Unknown Token';
-                        updateDashboard(price, tokenName);
+                        const logoUrl = pair.baseToken.logoURI || '/api/placeholder/40/40';
+                        updateDashboard(price, tokenName, logoUrl);
                         clearError();
                     } else {
                         showError('No valid price data found in the API response');
@@ -214,13 +230,15 @@
             }
         }
 
-        function updateDashboard(price, tokenName) {
+        function updateDashboard(price, tokenName, logoUrl) {
             const priceElement = document.getElementById('price');
             const tokenNameElement = document.getElementById('tokenName');
+            const profilePicElement = document.getElementById('profilePic');
             const priceIndicator = document.getElementById('priceIndicator');
 
             priceElement.textContent = `${price.toFixed(6)} SOL`; // Display price with 6 decimal places
             tokenNameElement.textContent = tokenName;
+            profilePicElement.src = logoUrl;
 
             if (price >= minPrice && price <= maxPrice) {
                 priceElement.style.color = 'green';
