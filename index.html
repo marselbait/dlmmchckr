@@ -80,6 +80,26 @@
             margin-top: 10px;
             font-size: 14px;
         }
+        #timeElapsed {
+            font-size: 14px;
+            color: #666;
+            margin-top: 10px;
+        }
+        .price-visual {
+            height: 20px;
+            background-color: #e0e0e0;
+            margin-top: 15px;
+            position: relative;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .price-indicator {
+            width: 10px;
+            height: 20px;
+            background-color: #4CAF50;
+            position: absolute;
+            transition: left 0.3s ease;
+        }
         @keyframes blink {
             0% { opacity: 1; }
             50% { opacity: 0.5; }
@@ -99,6 +119,7 @@
             <span id="minPrice">Min: 0 SOL</span>
             <span id="maxPrice">Max: 0 SOL</span>
         </div>
+        <div id="timeElapsed">Time Elapsed: 0s</div>
         <div class="input-group">
             <label for="caInput">Contract Address:</label>
             <input type="text" id="caInput" placeholder="Enter contract address">
@@ -113,6 +134,9 @@
         </div>
         <button onclick="updateSettings()">Update</button>
         <div id="errorMessage"></div>
+        <div class="price-visual">
+            <div class="price-indicator" id="priceIndicator"></div>
+        </div>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.21.1/axios.min.js"></script>
@@ -121,6 +145,8 @@
         let minPrice = 0;
         let maxPrice = 1000000;
         let updateInterval;
+        let startTime;
+        let elapsedInterval;
 
         function updateSettings() {
             const newCA = document.getElementById('caInput').value.trim();
@@ -142,8 +168,18 @@
             document.getElementById('maxPrice').textContent = `Max: ${maxPrice} SOL`;
 
             clearInterval(updateInterval);
+            clearInterval(elapsedInterval);
+            startTime = Date.now();
+            updateElapsedTime();
+            elapsedInterval = setInterval(updateElapsedTime, 1000);
+
             fetchPrice();
             updateInterval = setInterval(fetchPrice, 2000);
+        }
+
+        function updateElapsedTime() {
+            const elapsed = Math.floor((Date.now() - startTime) / 1000);
+            document.getElementById('timeElapsed').textContent = `Time Elapsed: ${elapsed}s`;
         }
 
         async function fetchPrice() {
@@ -178,6 +214,7 @@
         function updateDashboard(price, tokenName) {
             const priceElement = document.getElementById('price');
             const tokenNameElement = document.getElementById('tokenName');
+            const priceIndicator = document.getElementById('priceIndicator');
 
             priceElement.textContent = `${price} SOL`;
             tokenNameElement.textContent = tokenName;
@@ -187,6 +224,11 @@
             } else {
                 priceElement.style.color = 'red';
             }
+
+            // Update price indicator
+            const percentage = (price - minPrice) / (maxPrice - minPrice) * 100;
+            const clampedPercentage = Math.min(Math.max(percentage, 0), 100);
+            priceIndicator.style.left = `${clampedPercentage}%`;
 
             // Add blink effect
             priceElement.classList.remove('blink');
