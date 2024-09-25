@@ -261,16 +261,16 @@
                 console.log('API Response:', response.data);
 
                 if (response.data && response.data.pairs && response.data.pairs.length > 0) {
-                    const sortedPairs = response.data.pairs.sort((a, b) => b.liquidity.usd - a.liquidity.usd);
-                    const pair = sortedPairs[0]; // Use the pair with the highest liquidity
+                    // Only look for pairs on the Solana chain
+                    const pair = response.data.pairs.find(p => p.chainId === 'sol');
 
                     if (pair && pair.priceNative && pair.baseToken) {
-                        const price = parseFloat(pair.priceNative);
+                        const price = parseFloat(pair.priceNative);  // Native price in SOL
                         const tokenName = pair.baseToken.name || 'Unknown Token';
                         updateDashboard(price, tokenName);
                         clearError();
                     } else {
-                        showError('No valid price data found in the API response');
+                        showError('No valid SOL price data found in the API response');
                     }
                 } else {
                     showError('No data found for this contract address');
