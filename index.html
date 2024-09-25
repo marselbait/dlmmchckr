@@ -112,6 +112,14 @@
             position: absolute;
             transition: left 0.3s ease;
         }
+        @keyframes blink {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        .blink {
+            animation: blink 0.5s;
+        }
     </style>
 </head>
 <body>
@@ -152,6 +160,7 @@
         let updateInterval;
         let startTime;
         let elapsedInterval;
+        let lastPrice = null;
 
         function loadFromLocalStorage() {
             console.log("Loading from local storage...");
@@ -286,6 +295,14 @@
             const percentage = (price - minPrice) / (maxPrice - minPrice) * 100;
             const clampedPercentage = Math.min(Math.max(percentage, 0), 100);
             priceIndicator.style.left = `${clampedPercentage}%`;
+
+            // Add blinking effect if price has changed
+            if (lastPrice !== null && price !== lastPrice) {
+                priceElement.classList.remove('blink');
+                void priceElement.offsetWidth; // Trigger reflow
+                priceElement.classList.add('blink');
+            }
+            lastPrice = price;
         }
 
         function showError(message) {
@@ -303,6 +320,7 @@
             contractAddress = "";
             minPrice = 0;
             maxPrice = 1000000;
+            lastPrice = null;
             document.getElementById('caInput').value = '';
             document.getElementById('minInput').value = '';
             document.getElementById('maxInput').value = '';
