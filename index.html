@@ -4,13 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Solana Memecoin Dashboard</title>
-    
-    <!-- Import Google Font "Poppins" -->
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;700&display=swap" rel="stylesheet">
-
     <style>
         body {
-            font-family: 'Poppins', sans-serif; /* Modern font */
+            font-family: 'Arial', sans-serif;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -48,7 +44,6 @@
             font-weight: bold;
             margin: 10px 0;
             transition: color 0.3s ease;
-            animation: blinkAnimation 1s infinite; /* Blinking effect */
         }
         .min-max-price {
             font-size: 16px;
@@ -117,12 +112,13 @@
             position: absolute;
             transition: left 0.3s ease;
         }
-        
-        /* Keyframe animation for blinking */
-        @keyframes blinkAnimation {
+        @keyframes blink {
             0% { opacity: 1; }
             50% { opacity: 0.5; }
             100% { opacity: 1; }
+        }
+        .blink {
+            animation: blink 0.5s;
         }
     </style>
 </head>
@@ -261,16 +257,16 @@
                 console.log('API Response:', response.data);
 
                 if (response.data && response.data.pairs && response.data.pairs.length > 0) {
-                    // Only look for pairs on the Solana chain
-                    const pair = response.data.pairs.find(p => p.chainId === 'sol');
+                    const sortedPairs = response.data.pairs.sort((a, b) => b.liquidity.usd - a.liquidity.usd);
+                    const pair = sortedPairs[0]; // Use the pair with the highest liquidity
 
                     if (pair && pair.priceNative && pair.baseToken) {
-                        const price = parseFloat(pair.priceNative);  // Native price in SOL
+                        const price = parseFloat(pair.priceNative);
                         const tokenName = pair.baseToken.name || 'Unknown Token';
                         updateDashboard(price, tokenName);
                         clearError();
                     } else {
-                        showError('No valid SOL price data found in the API response');
+                        showError('No valid price data found in the API response');
                     }
                 } else {
                     showError('No data found for this contract address');
