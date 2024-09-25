@@ -19,7 +19,7 @@
             border-radius: 10px;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
             padding: 20px;
-            width: 300px;
+            width: 320px;
         }
         .contractAddress {
             font-size: 12px;
@@ -33,18 +33,22 @@
             margin-bottom: 10px;
             color: #333;
         }
+        .price-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 15px 0;
+        }
         .price {
             font-size: 28px;
             font-weight: bold;
             margin: 10px 0;
             transition: color 0.3s ease;
         }
-        .range {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 10px;
-            font-size: 14px;
+        .min-max-price {
+            font-size: 16px;
             color: #666;
+            margin: 5px 0;
         }
         .input-group {
             margin-bottom: 10px;
@@ -114,10 +118,10 @@
     <div class="card" id="dashboard">
         <div id="tokenName" class="tokenName">Token Name Will Appear Here</div>
         <div id="contractAddress" class="contractAddress">Contract Address</div>
-        <div class="price" id="price">0 SOL</div>
-        <div class="range">
-            <span id="minPrice">Min: 0 SOL</span>
-            <span id="maxPrice">Max: 0 SOL</span>
+        <div class="price-container">
+            <div id="minPrice" class="min-max-price">Min: 0 SOL</div>
+            <div class="price" id="price">0 SOL</div>
+            <div id="maxPrice" class="min-max-price">Max: 0 SOL</div>
         </div>
         <div id="timeElapsed">Time Elapsed: 00:00:00</div>
         <div class="input-group">
@@ -126,11 +130,11 @@
         </div>
         <div class="input-group">
             <label for="minInput">Minimum Price (SOL):</label>
-            <input type="number" id="minInput" placeholder="Enter min price">
+            <input type="number" id="minInput" placeholder="Enter min price" step="0.000000000001">
         </div>
         <div class="input-group">
             <label for="maxInput">Maximum Price (SOL):</label>
-            <input type="number" id="maxInput" placeholder="Enter max price">
+            <input type="number" id="maxInput" placeholder="Enter max price" step="0.000000000001">
         </div>
         <button onclick="updateSettings()">Update</button>
         <button id="resetButton" onclick="resetDashboard()">Reset</button>
@@ -270,7 +274,7 @@
             const tokenNameElement = document.getElementById('tokenName');
             const priceIndicator = document.getElementById('priceIndicator');
 
-            priceElement.textContent = `${price.toFixed(6)} SOL`;
+            priceElement.textContent = `${price.toFixed(12)} SOL`;
             tokenNameElement.textContent = tokenName;
 
             if (price >= minPrice && price <= maxPrice) {
