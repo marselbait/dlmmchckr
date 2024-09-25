@@ -6,18 +6,18 @@
     <title>Solana Memecoin Dashboard</title>
     <style>
         /* ... (previous styles remain unchanged) ... */
-        @keyframes blink {
-            0% { opacity: 1; }
-            50% { opacity: 0.5; }
-            100% { opacity: 1; }
-        }
-        .blink {
-            animation: blink 0.5s;
+        #debugInfo {
+            margin-top: 20px;
+            font-size: 12px;
+            color: #666;
+            white-space: pre-wrap;
+            word-wrap: break-word;
         }
     </style>
 </head>
 <body>
-    <!-- ... (HTML structure remains unchanged) ... -->
+    <!-- ... (previous HTML structure) ... -->
+    <div id="debugInfo"></div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.21.1/axios.min.js"></script>
     <script>
@@ -29,10 +29,66 @@
         let elapsedInterval;
         let lastPrice = null;
 
-        // ... (other functions remain unchanged) ...
+        function debug(message) {
+            console.log(message);
+            const debugElement = document.getElementById('debugInfo');
+            debugElement.textContent += message + '\n';
+        }
+
+        function loadFromLocalStorage() {
+            debug("Loading from local storage...");
+            try {
+                const savedData = JSON.parse(localStorage.getItem('memecoinDashboardData'));
+                if (savedData) {
+                    debug("Saved data found: " + JSON.stringify(savedData));
+                    contractAddress = savedData.contractAddress || "";
+                    minPrice = savedData.minPrice || 0;
+                    maxPrice = savedData.maxPrice || 1000000;
+                    document.getElementById('caInput').value = contractAddress;
+                    document.getElementById('minInput').value = minPrice;
+                    document.getElementById('maxInput').value = maxPrice;
+                    document.getElementById('contractAddress').textContent = contractAddress;
+                    document.getElementById('minPrice').textContent = `Min: ${minPrice} SOL`;
+                    document.getElementById('maxPrice').textContent = `Max: ${maxPrice} SOL`;
+                    if (contractAddress) {
+                        debug("Starting updates with saved contract address: " + contractAddress);
+                        startUpdates();
+                    }
+                } else {
+                    debug("No saved data found");
+                }
+            } catch (error) {
+                debug("Error loading from local storage: " + error.message);
+                showError("Error loading saved data. Please reset the dashboard.");
+            }
+        }
+
+        function updateSettings() {
+            debug("Updating settings...");
+            const newCA = document.getElementById('caInput').value.trim();
+            const newMin = parseFloat(document.getElementById('minInput').value);
+            const newMax = parseFloat(document.getElementById('maxInput').value);
+
+            if (newCA) {
+                contractAddress = newCA;
+                document.getElementById('contractAddress').textContent = contractAddress;
+            } else {
+                showError("Please enter a valid contract address.");
+                return;
+            }
+
+            if (!isNaN(newMin)) minPrice = newMin;
+            if (!isNaN(newMax)) maxPrice = newMax;
+
+            document.getElementById('minPrice').textContent = `Min: ${minPrice} SOL`;
+            document.getElementById('maxPrice').textContent = `Max: ${maxPrice} SOL`;
+
+            saveToLocalStorage();
+            startUpdates();
+        }
 
         async function fetchPrice() {
-            console.log("Fetching price...");
+            debug("Fetching price...");
             if (!contractAddress) {
                 showError('Please enter a contract address');
                 return;
@@ -40,7 +96,7 @@
 
             try {
                 const response = await axios.get(`https://api.dexscreener.com/latest/dex/tokens/${contractAddress}`);
-                console.log('API Response:', response.data);
+                debug('API Response: ' + JSON.stringify(response.data));
 
                 if (response.data && response.data.pairs && response.data.pairs.length > 0) {
                     const sortedPairs = response.data.pairs.sort((a, b) => b.liquidity.usd - a.liquidity.usd);
@@ -49,6 +105,7 @@
                     if (pair && pair.priceNative && pair.baseToken) {
                         const price = parseFloat(pair.priceNative);
                         const tokenName = pair.baseToken.name || 'Unknown Token';
+                        debug(`Updating dashboard with price: ${price} and token name: ${tokenName}`);
                         updateDashboard(price, tokenName);
                         clearError();
                     } else {
@@ -58,13 +115,12 @@
                     showError('No data found for this contract address');
                 }
             } catch (error) {
-                console.error('Error fetching price:', error);
+                debug('Error fetching price: ' + error.message);
                 showError(`Error fetching price: ${error.message}`);
             }
         }
 
         function updateDashboard(price, tokenName) {
-            console.log(`Updating dashboard with price: ${price} and token name: ${tokenName}`);
             const priceElement = document.getElementById('price');
             const tokenNameElement = document.getElementById('tokenName');
             const priceIndicator = document.getElementById('priceIndicator');
@@ -84,16 +140,19 @@
             const clampedPercentage = Math.min(Math.max(percentage, 0), 100);
             priceIndicator.style.left = `${clampedPercentage}%`;
 
+            debug(`Dashboard updated - Price: ${formattedPrice}, Token Name: ${tokenName}, Color: ${priceElement.style.color}, Indicator Position: ${clampedPercentage}%`);
+
             // Add blinking effect if price has changed
             if (lastPrice !== null && price !== lastPrice) {
                 priceElement.classList.remove('blink');
                 void priceElement.offsetWidth; // Trigger reflow
                 priceElement.classList.add('blink');
+                debug("Price changed, blinking effect applied");
             }
             lastPrice = price;
         }
 
-        // ... (remaining functions unchanged) ...
+        // ... (other functions remain unchanged) ...
 
         // Load saved data on page load
         window.onload = loadFromLocalStorage;
