@@ -5,10 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Solana Memecoin Dashboard</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;700&display=swap');
-
         body {
-            font-family: 'Poppins', sans-serif;
+            font-family: 'Arial', sans-serif;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -46,7 +44,6 @@
             font-weight: bold;
             margin: 10px 0;
             transition: color 0.3s ease;
-            animation: blinkAnimation 1s infinite;
         }
         .min-max-price {
             font-size: 16px;
@@ -107,4 +104,239 @@
             position: relative;
             border-radius: 10px;
             overflow: hidden;
-       
+        }
+        .price-indicator {
+            width: 10px;
+            height: 20px;
+            background-color: #4CAF50;
+            position: absolute;
+            transition: left 0.3s ease;
+        }
+        @keyframes blink {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        .blink {
+            animation: blink 0.5s;
+        }
+    </style>
+</head>
+<body>
+    <div class="card" id="dashboard">
+        <div id="tokenName" class="tokenName">Token Name Will Appear Here</div>
+        <div id="contractAddress" class="contractAddress">Contract Address</div>
+        <div class="price-container">
+            <div id="minPrice" class="min-max-price">Min: 0 SOL</div>
+            <div class="price" id="price">0 SOL</div>
+            <div id="maxPrice" class="min-max-price">Max: 0 SOL</div>
+        </div>
+        <div id="timeElapsed">Time Elapsed: 00:00:00</div>
+        <div class="input-group">
+            <label for="caInput">Contract Address:</label>
+            <input type="text" id="caInput" placeholder="Enter contract address">
+        </div>
+        <div class="input-group">
+            <label for="minInput">Minimum Price (SOL):</label>
+            <input type="number" id="minInput" placeholder="Enter min price" step="0.000000000001">
+        </div>
+        <div class="input-group">
+            <label for="maxInput">Maximum Price (SOL):</label>
+            <input type="number" id="maxInput" placeholder="Enter max price" step="0.000000000001">
+        </div>
+        <button onclick="updateSettings()">Update</button>
+        <button id="resetButton" onclick="resetDashboard()">Reset</button>
+        <div id="errorMessage"></div>
+        <div class="price-visual">
+            <div class="price-indicator" id="priceIndicator"></div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.21.1/axios.min.js"></script>
+    <script>
+        let contractAddress = "";
+        let minPrice = 0;
+        let maxPrice = 1000000;
+        let updateInterval;
+        let startTime;
+        let elapsedInterval;
+        let lastPrice = null;
+
+        function loadFromLocalStorage() {
+            console.log("Loading from local storage...");
+            try {
+                const savedData = JSON.parse(localStorage.getItem('memecoinDashboardData'));
+                if (savedData) {
+                    console.log("Saved data found:", savedData);
+                    contractAddress = savedData.contractAddress || "";
+                    minPrice = savedData.minPrice || 0;
+                    maxPrice = savedData.maxPrice || 1000000;
+                    document.getElementById('caInput').value = contractAddress;
+                    document.getElementById('minInput').value = minPrice;
+                    document.getElementById('maxInput').value = maxPrice;
+                    document.getElementById('contractAddress').textContent = contractAddress;
+                    document.getElementById('minPrice').textContent = `Min: ${minPrice} SOL`;
+                    document.getElementById('maxPrice').textContent = `Max: ${maxPrice} SOL`;
+                    if (contractAddress) {
+                        console.log("Starting updates with saved contract address:", contractAddress);
+                        startUpdates();
+                    }
+                } else {
+                    console.log("No saved data found");
+                }
+            } catch (error) {
+                console.error("Error loading from local storage:", error);
+                showError("Error loading saved data. Please reset the dashboard.");
+            }
+        }
+
+        function saveToLocalStorage() {
+            console.log("Saving to local storage...");
+            const dataToSave = {
+                contractAddress,
+                minPrice,
+                maxPrice
+            };
+            localStorage.setItem('memecoinDashboardData', JSON.stringify(dataToSave));
+        }
+
+        function updateSettings() {
+            console.log("Updating settings...");
+            const newCA = document.getElementById('caInput').value.trim();
+            const newMin = parseFloat(document.getElementById('minInput').value);
+            const newMax = parseFloat(document.getElementById('maxInput').value);
+
+            if (newCA) {
+                contractAddress = newCA;
+                document.getElementById('contractAddress').textContent = contractAddress;
+            } else {
+                showError("Please enter a valid contract address.");
+                return;
+            }
+
+            if (!isNaN(newMin)) minPrice = newMin;
+            if (!isNaN(newMax)) maxPrice = newMax;
+
+            document.getElementById('minPrice').textContent = `Min: ${minPrice} SOL`;
+            document.getElementById('maxPrice').textContent = `Max: ${maxPrice} SOL`;
+
+            saveToLocalStorage();
+            startUpdates();
+        }
+
+        function startUpdates() {
+            console.log("Starting updates...");
+            clearInterval(updateInterval);
+            clearInterval(elapsedInterval);
+            startTime = Date.now();
+            updateElapsedTime();
+            elapsedInterval = setInterval(updateElapsedTime, 1000);
+
+            fetchPrice();
+            updateInterval = setInterval(fetchPrice, 5000); // Update every 5 seconds
+        }
+
+        function updateElapsedTime() {
+            const elapsed = Math.floor((Date.now() - startTime) / 1000);
+            const hours = Math.floor(elapsed / 3600);
+            const minutes = Math.floor((elapsed % 3600) / 60);
+            const seconds = elapsed % 60;
+            const timeString = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            document.getElementById('timeElapsed').textContent = `Time Elapsed: ${timeString}`;
+        }
+
+        async function fetchPrice() {
+            console.log("Fetching price...");
+            if (!contractAddress) {
+                showError('Please enter a contract address');
+                return;
+            }
+
+            try {
+                const response = await axios.get(`https://api.dexscreener.com/latest/dex/tokens/${contractAddress}`);
+                console.log('API Response:', response.data);
+
+                if (response.data && response.data.pairs && response.data.pairs.length > 0) {
+                    const sortedPairs = response.data.pairs.sort((a, b) => b.liquidity.usd - a.liquidity.usd);
+                    const pair = sortedPairs[0]; // Use the pair with the highest liquidity
+
+                    if (pair && pair.priceNative && pair.baseToken) {
+                        const price = parseFloat(pair.priceNative);
+                        const tokenName = pair.baseToken.name || 'Unknown Token';
+                        updateDashboard(price, tokenName);
+                        clearError();
+                    } else {
+                        showError('No valid price data found in the API response');
+                    }
+                } else {
+                    showError('No data found for this contract address');
+                }
+            } catch (error) {
+                console.error('Error fetching price:', error);
+                showError(`Error fetching price: ${error.message}`);
+            }
+        }
+
+        function updateDashboard(price, tokenName) {
+            console.log(`Updating dashboard with price: ${price} and token name: ${tokenName}`);
+            const priceElement = document.getElementById('price');
+            const tokenNameElement = document.getElementById('tokenName');
+            const priceIndicator = document.getElementById('priceIndicator');
+
+            priceElement.textContent = `${price.toFixed(12)} SOL`;
+            tokenNameElement.textContent = tokenName;
+
+            if (price >= minPrice && price <= maxPrice) {
+                priceElement.style.color = 'green';
+            } else {
+                priceElement.style.color = 'red';
+            }
+
+            const percentage = (price - minPrice) / (maxPrice - minPrice) * 100;
+            const clampedPercentage = Math.min(Math.max(percentage, 0), 100);
+            priceIndicator.style.left = `${clampedPercentage}%`;
+
+            // Add blinking effect if price has changed
+            if (lastPrice !== null && price !== lastPrice) {
+                priceElement.classList.remove('blink');
+                void priceElement.offsetWidth; // Trigger reflow
+                priceElement.classList.add('blink');
+            }
+            lastPrice = price;
+        }
+
+        function showError(message) {
+            console.error("Error:", message);
+            document.getElementById('errorMessage').textContent = message;
+        }
+
+        function clearError() {
+            document.getElementById('errorMessage').textContent = '';
+        }
+
+        function resetDashboard() {
+            console.log("Resetting dashboard...");
+            localStorage.removeItem('memecoinDashboardData');
+            contractAddress = "";
+            minPrice = 0;
+            maxPrice = 1000000;
+            lastPrice = null;
+            document.getElementById('caInput').value = '';
+            document.getElementById('minInput').value = '';
+            document.getElementById('maxInput').value = '';
+            document.getElementById('tokenName').textContent = 'Token Name Will Appear Here';
+            document.getElementById('contractAddress').textContent = 'Contract Address';
+            document.getElementById('price').textContent = '0 SOL';
+            document.getElementById('minPrice').textContent = 'Min: 0 SOL';
+            document.getElementById('maxPrice').textContent = 'Max: 0 SOL';
+            document.getElementById('timeElapsed').textContent = 'Time Elapsed: 00:00:00';
+            clearInterval(updateInterval);
+            clearInterval(elapsedInterval);
+            clearError();
+        }
+
+        // Load saved data on page load
+        window.onload = loadFromLocalStorage;
+    </script>
+</body>
+</html>
