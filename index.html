@@ -3,52 +3,31 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Solana Memecoin Dashboard</title>
+    <title>Meteora Multi-Token DLMM Investment Dashboard</title>
     <style>
         body {
             font-family: 'Arial', sans-serif;
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh;
+            min-height: 100vh;
             margin: 0;
             background-color: #f0f0f0;
+            padding: 20px;
         }
         .card {
             background-color: #ffffff;
             border-radius: 10px;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
             padding: 20px;
-            width: 320px;
-        }
-        .contractAddress {
-            font-size: 12px;
-            color: #666;
-            word-break: break-all;
-            margin-bottom: 10px;
+            width: 90%;
+            max-width: 800px;
         }
         .tokenName {
             font-size: 24px;
             font-weight: bold;
             margin-bottom: 10px;
             color: #333;
-        }
-        .price-container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            margin: 15px 0;
-        }
-        .price {
-            font-size: 28px;
-            font-weight: bold;
-            margin: 10px 0;
-            transition: color 0.3s ease;
-        }
-        .min-max-price {
-            font-size: 16px;
-            color: #666;
-            margin: 5px 0;
         }
         .input-group {
             margin-bottom: 10px;
@@ -59,7 +38,7 @@
             font-size: 14px;
             color: #333;
         }
-        input {
+        input, select {
             width: 100%;
             padding: 5px;
             border: 1px solid #ccc;
@@ -97,20 +76,14 @@
             margin-top: 10px;
             margin-bottom: 20px;
         }
-        .price-visual {
-            height: 20px;
-            background-color: #e0e0e0;
-            margin-top: 15px;
-            position: relative;
-            border-radius: 10px;
-            overflow: hidden;
+        .investment-list {
+            margin-top: 20px;
         }
-        .price-indicator {
-            width: 10px;
-            height: 20px;
-            background-color: #4CAF50;
-            position: absolute;
-            transition: left 0.3s ease;
+        .investment-item {
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 4px;
         }
         @keyframes blink {
             0% { opacity: 1; }
@@ -124,63 +97,46 @@
 </head>
 <body>
     <div class="card" id="dashboard">
-        <div id="tokenName" class="tokenName">Token Name Will Appear Here</div>
-        <div id="contractAddress" class="contractAddress">Contract Address</div>
-        <div class="price-container">
-            <div id="minPrice" class="min-max-price">Min: 0 SOL</div>
-            <div class="price" id="price">0 SOL</div>
-            <div id="maxPrice" class="min-max-price">Max: 0 SOL</div>
-        </div>
+        <h1>Meteora Multi-Token DLMM Investment Dashboard</h1>
         <div id="timeElapsed">Time Elapsed: 00:00:00</div>
         <div class="input-group">
-            <label for="caInput">Contract Address:</label>
-            <input type="text" id="caInput" placeholder="Enter contract address">
+            <label for="token1">Token 1:</label>
+            <input type="text" id="token1" placeholder="Enter token symbol (e.g., FWOG)">
         </div>
         <div class="input-group">
-            <label for="minInput">Minimum Price (SOL):</label>
-            <input type="number" id="minInput" placeholder="Enter min price" step="0.000000000001">
+            <label for="token2">Token 2:</label>
+            <input type="text" id="token2" placeholder="Enter token symbol (e.g., SOL)">
         </div>
         <div class="input-group">
-            <label for="maxInput">Maximum Price (SOL):</label>
-            <input type="number" id="maxInput" placeholder="Enter max price" step="0.000000000001">
+            <label for="amount1">Amount of Token 1:</label>
+            <input type="number" id="amount1" placeholder="Enter amount" step="0.000000000001">
         </div>
-        <button onclick="updateSettings()">Update</button>
-        <button id="resetButton" onclick="resetDashboard()">Reset</button>
+        <div class="input-group">
+            <label for="amount2">Amount of Token 2:</label>
+            <input type="number" id="amount2" placeholder="Enter amount" step="0.000000000001">
+        </div>
+        <button onclick="addInvestment()">Add Investment</button>
+        <button id="resetButton" onclick="resetDashboard()">Reset All</button>
         <div id="errorMessage"></div>
-        <div class="price-visual">
-            <div class="price-indicator" id="priceIndicator"></div>
-        </div>
+        <div class="investment-list" id="investmentList"></div>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.21.1/axios.min.js"></script>
     <script>
-        let contractAddress = "";
-        let minPrice = 0;
-        let maxPrice = 1000000;
+        let investments = [];
         let updateInterval;
         let startTime;
         let elapsedInterval;
-        let lastPrice = null;
 
         function loadFromLocalStorage() {
             console.log("Loading from local storage...");
             try {
-                const savedData = JSON.parse(localStorage.getItem('memecoinDashboardData'));
-                if (savedData) {
+                const savedData = JSON.parse(localStorage.getItem('meteoraMultiTokenData'));
+                if (savedData && savedData.investments) {
                     console.log("Saved data found:", savedData);
-                    contractAddress = savedData.contractAddress || "";
-                    minPrice = savedData.minPrice || 0;
-                    maxPrice = savedData.maxPrice || 1000000;
-                    document.getElementById('caInput').value = contractAddress;
-                    document.getElementById('minInput').value = minPrice;
-                    document.getElementById('maxInput').value = maxPrice;
-                    document.getElementById('contractAddress').textContent = contractAddress;
-                    document.getElementById('minPrice').textContent = `Min: ${minPrice} SOL`;
-                    document.getElementById('maxPrice').textContent = `Max: ${maxPrice} SOL`;
-                    if (contractAddress) {
-                        console.log("Starting updates with saved contract address:", contractAddress);
-                        startUpdates();
-                    }
+                    investments = savedData.investments;
+                    renderInvestments();
+                    startUpdates();
                 } else {
                     console.log("No saved data found");
                 }
@@ -193,35 +149,67 @@
         function saveToLocalStorage() {
             console.log("Saving to local storage...");
             const dataToSave = {
-                contractAddress,
-                minPrice,
-                maxPrice
+                investments
             };
-            localStorage.setItem('memecoinDashboardData', JSON.stringify(dataToSave));
+            localStorage.setItem('meteoraMultiTokenData', JSON.stringify(dataToSave));
         }
 
-        function updateSettings() {
-            console.log("Updating settings...");
-            const newCA = document.getElementById('caInput').value.trim();
-            const newMin = parseFloat(document.getElementById('minInput').value);
-            const newMax = parseFloat(document.getElementById('maxInput').value);
+        function addInvestment() {
+            const token1 = document.getElementById('token1').value.toUpperCase();
+            const token2 = document.getElementById('token2').value.toUpperCase();
+            const amount1 = parseFloat(document.getElementById('amount1').value);
+            const amount2 = parseFloat(document.getElementById('amount2').value);
 
-            if (newCA) {
-                contractAddress = newCA;
-                document.getElementById('contractAddress').textContent = contractAddress;
-            } else {
-                showError("Please enter a valid contract address.");
+            if (!token1 || !token2 || isNaN(amount1) || isNaN(amount2)) {
+                showError("Please fill in all fields with valid values.");
                 return;
             }
 
-            if (!isNaN(newMin)) minPrice = newMin;
-            if (!isNaN(newMax)) maxPrice = newMax;
-
-            document.getElementById('minPrice').textContent = `Min: ${minPrice} SOL`;
-            document.getElementById('maxPrice').textContent = `Max: ${maxPrice} SOL`;
+            investments.push({
+                token1,
+                token2,
+                amount1,
+                amount2,
+                id: Date.now() // Unique identifier for each investment
+            });
 
             saveToLocalStorage();
+            renderInvestments();
             startUpdates();
+
+            // Clear input fields
+            document.getElementById('token1').value = '';
+            document.getElementById('token2').value = '';
+            document.getElementById('amount1').value = '';
+            document.getElementById('amount2').value = '';
+        }
+
+        function renderInvestments() {
+            const listElement = document.getElementById('investmentList');
+            listElement.innerHTML = '';
+
+            investments.forEach(inv => {
+                const item = document.createElement('div');
+                item.className = 'investment-item';
+                item.innerHTML = `
+                    <h3>${inv.token1}/${inv.token2} Pool</h3>
+                    <p>Investment: ${inv.amount1} ${inv.token1} and ${inv.amount2} ${inv.token2}</p>
+                    <p>${inv.token1} Price: <span id="price_${inv.id}_${inv.token1}">Loading...</span></p>
+                    <p>${inv.token2} Price: <span id="price_${inv.id}_${inv.token2}">Loading...</span></p>
+                    <p>Total Liquidity: <span id="liquidity_${inv.id}">Loading...</span></p>
+                    <p>24h Volume: <span id="volume_${inv.id}">Loading...</span></p>
+                    <p>Your Position Value: <span id="position_${inv.id}">Loading...</span></p>
+                    <p>Estimated Fees Earned: <span id="fees_${inv.id}">Loading...</span></p>
+                    <button onclick="removeInvestment(${inv.id})">Remove</button>
+                `;
+                listElement.appendChild(item);
+            });
+        }
+
+        function removeInvestment(id) {
+            investments = investments.filter(inv => inv.id !== id);
+            saveToLocalStorage();
+            renderInvestments();
         }
 
         function startUpdates() {
@@ -232,8 +220,8 @@
             updateElapsedTime();
             elapsedInterval = setInterval(updateElapsedTime, 1000);
 
-            fetchPrice();
-            updateInterval = setInterval(fetchPrice, 5000); // Update every 5 seconds
+            fetchAllPoolData();
+            updateInterval = setInterval(fetchAllPoolData, 30000); // Update every 30 seconds
         }
 
         function updateElapsedTime() {
@@ -245,64 +233,62 @@
             document.getElementById('timeElapsed').textContent = `Time Elapsed: ${timeString}`;
         }
 
-        async function fetchPrice() {
-            console.log("Fetching price...");
-            if (!contractAddress) {
-                showError('Please enter a contract address');
-                return;
-            }
-
-            try {
-                const response = await axios.get(`https://api.dexscreener.com/latest/dex/tokens/${contractAddress}`);
-                console.log('API Response:', response.data);
-
-                if (response.data && response.data.pairs && response.data.pairs.length > 0) {
-                    const sortedPairs = response.data.pairs.sort((a, b) => b.liquidity.usd - a.liquidity.usd);
-                    const pair = sortedPairs[0]; // Use the pair with the highest liquidity
-
-                    if (pair && pair.priceNative && pair.baseToken) {
-                        const price = parseFloat(pair.priceNative);
-                        const tokenName = pair.baseToken.name || 'Unknown Token';
-                        updateDashboard(price, tokenName);
-                        clearError();
-                    } else {
-                        showError('No valid price data found in the API response');
-                    }
-                } else {
-                    showError('No data found for this contract address');
-                }
-            } catch (error) {
-                console.error('Error fetching price:', error);
-                showError(`Error fetching price: ${error.message}`);
+        async function fetchAllPoolData() {
+            console.log("Fetching all pool data...");
+            for (const inv of investments) {
+                await fetchPoolData(inv);
             }
         }
 
-        function updateDashboard(price, tokenName) {
-            console.log(`Updating dashboard with price: ${price} and token name: ${tokenName}`);
-            const priceElement = document.getElementById('price');
-            const tokenNameElement = document.getElementById('tokenName');
-            const priceIndicator = document.getElementById('priceIndicator');
+        async function fetchPoolData(investment) {
+            console.log(`Fetching pool data for ${investment.token1}/${investment.token2}...`);
+            try {
+                // Note: Replace this URL with the actual Meteora API endpoint when available
+                const response = await axios.get(`https://api.meteora.ag/pools/${investment.token1}_${investment.token2}`);
+                console.log('API Response:', response.data);
 
-            priceElement.textContent = `${price.toFixed(12)} SOL`;
-            tokenNameElement.textContent = tokenName;
-
-            if (price >= minPrice && price <= maxPrice) {
-                priceElement.style.color = 'green';
-            } else {
-                priceElement.style.color = 'red';
+                // Process the data and update the dashboard
+                updateInvestmentDisplay(investment, response.data);
+            } catch (error) {
+                console.error(`Error fetching pool data for ${investment.token1}/${investment.token2}:`, error);
+                showError(`Error fetching pool data: ${error.message}`);
             }
+        }
 
-            const percentage = (price - minPrice) / (maxPrice - minPrice) * 100;
-            const clampedPercentage = Math.min(Math.max(percentage, 0), 100);
-            priceIndicator.style.left = `${clampedPercentage}%`;
+        function updateInvestmentDisplay(investment, data) {
+            // Update token prices
+            document.getElementById(`price_${investment.id}_${investment.token1}`).textContent = `$${data.token1Price.toFixed(12)}`;
+            document.getElementById(`price_${investment.id}_${investment.token2}`).textContent = `$${data.token2Price.toFixed(12)}`;
 
-            // Add blinking effect if price has changed
-            if (lastPrice !== null && price !== lastPrice) {
-                priceElement.classList.remove('blink');
-                void priceElement.offsetWidth; // Trigger reflow
-                priceElement.classList.add('blink');
-            }
-            lastPrice = price;
+            // Update pool stats
+            document.getElementById(`liquidity_${investment.id}`).textContent = `$${data.totalLiquidity.toFixed(2)}`;
+            document.getElementById(`volume_${investment.id}`).textContent = `$${data.volume24h.toFixed(2)}`;
+
+            // Calculate and update position value
+            const positionValue = (investment.amount1 * data.token1Price) + (investment.amount2 * data.token2Price);
+            document.getElementById(`position_${investment.id}`).textContent = `$${positionValue.toFixed(2)}`;
+
+            // Estimate fees (this is a simplified calculation and may not be accurate)
+            const estimatedFees = (positionValue / data.totalLiquidity) * (data.volume24h * 0.003);
+            document.getElementById(`fees_${investment.id}`).textContent = `$${estimatedFees.toFixed(2)}`;
+
+            // Add blinking effect to updated values
+            const elements = [
+                `price_${investment.id}_${investment.token1}`,
+                `price_${investment.id}_${investment.token2}`,
+                `liquidity_${investment.id}`,
+                `volume_${investment.id}`,
+                `position_${investment.id}`,
+                `fees_${investment.id}`
+            ];
+            elements.forEach(id => {
+                const element = document.getElementById(id);
+                if (element) {
+                    element.classList.remove('blink');
+                    void element.offsetWidth; // Trigger reflow
+                    element.classList.add('blink');
+                }
+            });
         }
 
         function showError(message) {
@@ -310,29 +296,19 @@
             document.getElementById('errorMessage').textContent = message;
         }
 
-        function clearError() {
-            document.getElementById('errorMessage').textContent = '';
-        }
-
         function resetDashboard() {
             console.log("Resetting dashboard...");
-            localStorage.removeItem('memecoinDashboardData');
-            contractAddress = "";
-            minPrice = 0;
-            maxPrice = 1000000;
-            lastPrice = null;
-            document.getElementById('caInput').value = '';
-            document.getElementById('minInput').value = '';
-            document.getElementById('maxInput').value = '';
-            document.getElementById('tokenName').textContent = 'Token Name Will Appear Here';
-            document.getElementById('contractAddress').textContent = 'Contract Address';
-            document.getElementById('price').textContent = '0 SOL';
-            document.getElementById('minPrice').textContent = 'Min: 0 SOL';
-            document.getElementById('maxPrice').textContent = 'Max: 0 SOL';
+            localStorage.removeItem('meteoraMultiTokenData');
+            investments = [];
+            document.getElementById('investmentList').innerHTML = '';
+            document.getElementById('token1').value = '';
+            document.getElementById('token2').value = '';
+            document.getElementById('amount1').value = '';
+            document.getElementById('amount2').value = '';
             document.getElementById('timeElapsed').textContent = 'Time Elapsed: 00:00:00';
             clearInterval(updateInterval);
             clearInterval(elapsedInterval);
-            clearError();
+            document.getElementById('errorMessage').textContent = '';
         }
 
         // Load saved data on page load
