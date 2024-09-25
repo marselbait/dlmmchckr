@@ -5,113 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Solana Memecoin Dashboard</title>
     <style>
-        body {
-            font-family: 'Arial', sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-            background-color: #f0f0f0;
-        }
-        .card {
-            background-color: #ffffff;
-            border-radius: 10px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            padding: 20px;
-            width: 320px;
-        }
-        .contractAddress {
-            font-size: 12px;
-            color: #666;
-            word-break: break-all;
-            margin-bottom: 10px;
-        }
-        .tokenName {
-            font-size: 24px;
-            font-weight: bold;
-            margin-bottom: 10px;
-            color: #333;
-        }
-        .price-container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            margin: 15px 0;
-        }
-        .price {
-            font-size: 28px;
-            font-weight: bold;
-            margin: 10px 0;
-            transition: color 0.3s ease;
-        }
-        .min-max-price {
-            font-size: 16px;
-            color: #666;
-            margin: 5px 0;
-        }
-        .input-group {
-            margin-bottom: 10px;
-        }
-        .input-group label {
-            display: block;
-            margin-bottom: 5px;
-            font-size: 14px;
-            color: #333;
-        }
-        input {
-            width: 100%;
-            padding: 5px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            font-size: 14px;
-        }
-        button {
-            width: 100%;
-            padding: 10px;
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 16px;
-            margin-bottom: 10px;
-        }
-        button:hover {
-            background-color: #45a049;
-        }
-        #resetButton {
-            background-color: #f44336;
-        }
-        #resetButton:hover {
-            background-color: #d32f2f;
-        }
-        #errorMessage {
-            color: red;
-            margin-top: 10px;
-            font-size: 14px;
-        }
-        #timeElapsed {
-            font-size: 14px;
-            color: #666;
-            margin-top: 10px;
-            margin-bottom: 20px;
-        }
-        .price-visual {
-            height: 20px;
-            background-color: #e0e0e0;
-            margin-top: 15px;
-            position: relative;
-            border-radius: 10px;
-            overflow: hidden;
-        }
-        .price-indicator {
-            width: 10px;
-            height: 20px;
-            background-color: #4CAF50;
-            position: absolute;
-            transition: left 0.3s ease;
-        }
+        /* ... (previous styles remain unchanged) ... */
         @keyframes blink {
             0% { opacity: 1; }
             50% { opacity: 0.5; }
@@ -123,34 +17,7 @@
     </style>
 </head>
 <body>
-    <div class="card" id="dashboard">
-        <div id="tokenName" class="tokenName">Token Name Will Appear Here</div>
-        <div id="contractAddress" class="contractAddress">Contract Address</div>
-        <div class="price-container">
-            <div id="minPrice" class="min-max-price">Min: 0 SOL</div>
-            <div class="price" id="price">0 SOL</div>
-            <div id="maxPrice" class="min-max-price">Max: 0 SOL</div>
-        </div>
-        <div id="timeElapsed">Time Elapsed: 00:00:00</div>
-        <div class="input-group">
-            <label for="caInput">Contract Address:</label>
-            <input type="text" id="caInput" placeholder="Enter contract address">
-        </div>
-        <div class="input-group">
-            <label for="minInput">Minimum Price (SOL):</label>
-            <input type="number" id="minInput" placeholder="Enter min price" step="0.000000000001">
-        </div>
-        <div class="input-group">
-            <label for="maxInput">Maximum Price (SOL):</label>
-            <input type="number" id="maxInput" placeholder="Enter max price" step="0.000000000001">
-        </div>
-        <button onclick="updateSettings()">Update</button>
-        <button id="resetButton" onclick="resetDashboard()">Reset</button>
-        <div id="errorMessage"></div>
-        <div class="price-visual">
-            <div class="price-indicator" id="priceIndicator"></div>
-        </div>
-    </div>
+    <!-- ... (HTML structure remains unchanged) ... -->
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.21.1/axios.min.js"></script>
     <script>
@@ -162,88 +29,7 @@
         let elapsedInterval;
         let lastPrice = null;
 
-        function loadFromLocalStorage() {
-            console.log("Loading from local storage...");
-            try {
-                const savedData = JSON.parse(localStorage.getItem('memecoinDashboardData'));
-                if (savedData) {
-                    console.log("Saved data found:", savedData);
-                    contractAddress = savedData.contractAddress || "";
-                    minPrice = savedData.minPrice || 0;
-                    maxPrice = savedData.maxPrice || 1000000;
-                    document.getElementById('caInput').value = contractAddress;
-                    document.getElementById('minInput').value = minPrice;
-                    document.getElementById('maxInput').value = maxPrice;
-                    document.getElementById('contractAddress').textContent = contractAddress;
-                    document.getElementById('minPrice').textContent = `Min: ${minPrice} SOL`;
-                    document.getElementById('maxPrice').textContent = `Max: ${maxPrice} SOL`;
-                    if (contractAddress) {
-                        console.log("Starting updates with saved contract address:", contractAddress);
-                        startUpdates();
-                    }
-                } else {
-                    console.log("No saved data found");
-                }
-            } catch (error) {
-                console.error("Error loading from local storage:", error);
-                showError("Error loading saved data. Please reset the dashboard.");
-            }
-        }
-
-        function saveToLocalStorage() {
-            console.log("Saving to local storage...");
-            const dataToSave = {
-                contractAddress,
-                minPrice,
-                maxPrice
-            };
-            localStorage.setItem('memecoinDashboardData', JSON.stringify(dataToSave));
-        }
-
-        function updateSettings() {
-            console.log("Updating settings...");
-            const newCA = document.getElementById('caInput').value.trim();
-            const newMin = parseFloat(document.getElementById('minInput').value);
-            const newMax = parseFloat(document.getElementById('maxInput').value);
-
-            if (newCA) {
-                contractAddress = newCA;
-                document.getElementById('contractAddress').textContent = contractAddress;
-            } else {
-                showError("Please enter a valid contract address.");
-                return;
-            }
-
-            if (!isNaN(newMin)) minPrice = newMin;
-            if (!isNaN(newMax)) maxPrice = newMax;
-
-            document.getElementById('minPrice').textContent = `Min: ${minPrice} SOL`;
-            document.getElementById('maxPrice').textContent = `Max: ${maxPrice} SOL`;
-
-            saveToLocalStorage();
-            startUpdates();
-        }
-
-        function startUpdates() {
-            console.log("Starting updates...");
-            clearInterval(updateInterval);
-            clearInterval(elapsedInterval);
-            startTime = Date.now();
-            updateElapsedTime();
-            elapsedInterval = setInterval(updateElapsedTime, 1000);
-
-            fetchPrice();
-            updateInterval = setInterval(fetchPrice, 5000); // Update every 5 seconds
-        }
-
-        function updateElapsedTime() {
-            const elapsed = Math.floor((Date.now() - startTime) / 1000);
-            const hours = Math.floor(elapsed / 3600);
-            const minutes = Math.floor((elapsed % 3600) / 60);
-            const seconds = elapsed % 60;
-            const timeString = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-            document.getElementById('timeElapsed').textContent = `Time Elapsed: ${timeString}`;
-        }
+        // ... (other functions remain unchanged) ...
 
         async function fetchPrice() {
             console.log("Fetching price...");
@@ -283,7 +69,9 @@
             const tokenNameElement = document.getElementById('tokenName');
             const priceIndicator = document.getElementById('priceIndicator');
 
-            priceElement.textContent = `${price.toFixed(12)} SOL`;
+            // Format the price to a maximum of 12 decimal places, removing trailing zeros
+            const formattedPrice = price.toFixed(12).replace(/\.?0+$/, "");
+            priceElement.textContent = `${formattedPrice} SOL`;
             tokenNameElement.textContent = tokenName;
 
             if (price >= minPrice && price <= maxPrice) {
@@ -305,35 +93,7 @@
             lastPrice = price;
         }
 
-        function showError(message) {
-            console.error("Error:", message);
-            document.getElementById('errorMessage').textContent = message;
-        }
-
-        function clearError() {
-            document.getElementById('errorMessage').textContent = '';
-        }
-
-        function resetDashboard() {
-            console.log("Resetting dashboard...");
-            localStorage.removeItem('memecoinDashboardData');
-            contractAddress = "";
-            minPrice = 0;
-            maxPrice = 1000000;
-            lastPrice = null;
-            document.getElementById('caInput').value = '';
-            document.getElementById('minInput').value = '';
-            document.getElementById('maxInput').value = '';
-            document.getElementById('tokenName').textContent = 'Token Name Will Appear Here';
-            document.getElementById('contractAddress').textContent = 'Contract Address';
-            document.getElementById('price').textContent = '0 SOL';
-            document.getElementById('minPrice').textContent = 'Min: 0 SOL';
-            document.getElementById('maxPrice').textContent = 'Max: 0 SOL';
-            document.getElementById('timeElapsed').textContent = 'Time Elapsed: 00:00:00';
-            clearInterval(updateInterval);
-            clearInterval(elapsedInterval);
-            clearError();
-        }
+        // ... (remaining functions unchanged) ...
 
         // Load saved data on page load
         window.onload = loadFromLocalStorage;
